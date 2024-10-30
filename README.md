@@ -32,13 +32,13 @@ npm install -g expo-cli
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/Angelaestefan/music-player-app.git
+   git clone https://github.com/Angelaestefan/MusicPlayerApp.git
    ```
 
 2. Navigate into the project directory:
 
    ```bash
-   cd music-player-app
+   cd MusicPlayerApp
    ```
 
 3. Install dependencies:
