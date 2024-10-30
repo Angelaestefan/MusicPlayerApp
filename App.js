@@ -147,6 +147,7 @@ const PlayerScreen = ({ route }) => {
   const [sound, setSound] = useState();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
+  const [db, setDb] = useState(null);
   const [songs, setSongs] = useState([]);
 
   useEffect(() => {
