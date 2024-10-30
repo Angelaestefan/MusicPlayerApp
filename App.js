@@ -1,4 +1,3 @@
-// App.js
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -16,7 +15,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Initial song data
 const initialSongs = [
   {
     title: 'APT',
@@ -50,12 +48,10 @@ const initialSongs = [
   
 ];
 
-// Database initialization function
 const initDatabase = async () => {
   try {
     const db = await SQLite.openDatabaseAsync('musicdb3.db');
     
-    // Initialize database with tables and initial data
     await db.execAsync(`
       PRAGMA journal_mode = WAL;
       
@@ -69,7 +65,6 @@ const initDatabase = async () => {
       );
     `);
 
-    // Check if database is empty and insert initial data if needed
     const existingSongs = await db.getAllAsync('SELECT * FROM songs');
     if (existingSongs.length === 0) {
       for (const song of initialSongs) {
@@ -87,7 +82,6 @@ const initDatabase = async () => {
   }
 };
 
-// Home Screen Component
 const HomeScreen = ({ navigation }) => {
   const [songs, setSongs] = useState([]);
   const [db, setDb] = useState(null);
@@ -141,7 +135,6 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-// Player Screen Component
 const PlayerScreen = ({ route }) => {
   const { song } = route.params;
   const [sound, setSound] = useState();
@@ -187,14 +180,15 @@ const PlayerScreen = ({ route }) => {
       setIsPlaying(!isPlaying);
     } else {
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: songs[currentSongIndex].audioUrl },
+        songs[currentSongIndex].isLocal
+          ? songs[currentSongIndex].audioUrl  // if local
+          : { uri: songs[currentSongIndex].audioUrl }, // if remote
         { shouldPlay: true }
       );
       setSound(newSound);
       setIsPlaying(true);
     }
   }
-
   const playNext = async () => {
     if (sound) {
       await sound.unloadAsync();
