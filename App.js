@@ -16,48 +16,99 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Initialize database
-const db = SQLite.openDatabaseSync('musicdb.db');
-
-// Create tables
-await db.execAsync(`
-  PRAGMA journal_mode = WAL;
-  CREATE TABLE IF NOT EXISTS songs (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, artist TEXT NOT NULL, imageUrl TEXT NOT NULL, audioUrl TEXT NOT NULL, isLocal INTEGER);
-  INSERT INTO songs (title, imageUrl, audioUrl, isLocal) VALUES ('APT', 'Bruno Mars & Rose', '/home/angiea/MusicPlayerApp/assets/APT.jpg', '/home/angiea/MusicPlayerApp/assets/APT.mp3', 1);
+// Initial song data
+const initialSongs = [
+  {
+    title: 'APT',
+    artist: 'Bruno Mars & ROSÉ',
+    imageUrl: require('./assets/APT.jpg'),
+    audioUrl: 'APT.mp3',
+    isLocal: 1
+  },
+  {
+    title: 'Pink Pony Club',
+    artist: 'Chappel Roan',
+    imageUrl: require('./assets/pinkPonyClub.jpg'),
+    audioUrl: 'APT.mp3',
+    isLocal: 1
+  },
+  {
+    title: 'Juno',
+    artist: 'Sabrina Carpenter',
+    imageUrl: require('./assets/juno.png'),
+    audioUrl: 'APT.mp3',
+    isLocal: 1
+  },
+  {
+    title: 'Suivre le Soleil',
+    artist: 'Vanille',
+    imageUrl: require('./assets/suivreLeSoleil.jpg'),
+    audioUrl: 'APT.mp3',
+    isLocal: 1
+  },
   
-`);
+  
+];
 
+// Database initialization function
+const initDatabase = async () => {
+  try {
+    const db = await SQLite.openDatabaseAsync('musicdb3.db');
+    
+    // Initialize database with tables and initial data
+    await db.execAsync(`
+      PRAGMA journal_mode = WAL;
+      
+      CREATE TABLE IF NOT EXISTS songs (
+        id INTEGER PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL,
+        imageUrl TEXT NOT NULL,
+        audioUrl TEXT NOT NULL,
+        isLocal INTEGER NOT NULL
+      );
+    `);
 
+    // Check if database is empty and insert initial data if needed
+    const existingSongs = await db.getAllAsync('SELECT * FROM songs');
+    if (existingSongs.length === 0) {
+      for (const song of initialSongs) {
+        await db.runAsync(
+          'INSERT INTO songs (title, artist, imageUrl, audioUrl, isLocal) VALUES (?, ?, ?, ?, ?)',
+          [song.title, song.artist, song.imageUrl, song.audioUrl, song.isLocal]
+        );
+      }
+    }
+
+    return db;
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    throw error;
+  }
+};
 
 // Home Screen Component
 const HomeScreen = ({ navigation }) => {
   const [songs, setSongs] = useState([]);
+  const [db, setDb] = useState(null);
 
   useEffect(() => {
-    loadSongs();
+    const setupDatabase = async () => {
+      const database = await initDatabase();
+      setDb(database);
+      loadSongs(database);
+    };
+
+    setupDatabase();
   }, []);
 
-  const loadSongs = () => {
-    db.transaction(tx => {
-      tx.executeSql(
-        'SELECT * FROM songs',
-        [],
-        (_, { rows: { _array } }) => {
-          if (_array.length === 0) {
-            // Insert initial songs if database is empty
-            initialSongs.forEach(song => {
-              tx.executeSql(
-                'INSERT INTO songs (title, artist, imageUrl, audioUrl, isLocal) VALUES (?, ?, ?, ?, ?)',
-                [song.title, song.artist, song.imageUrl, song.audioUrl, song.isLocal]
-              );
-            });
-            setSongs(initialSongs);
-          } else {
-            setSongs(_array);
-          }
-        }
-      );
-    });
+  const loadSongs = async (database) => {
+    try {
+      const allSongs = await database.getAllAsync('SELECT * FROM songs');
+      setSongs(allSongs);
+    } catch (error) {
+      console.error('Error loading songs:', error);
+    }
   };
 
   const renderItem = ({ item }) => (
@@ -66,7 +117,8 @@ const HomeScreen = ({ navigation }) => {
       onPress={() => navigation.navigate('Player', { song: item })}
     >
       <Image
-        source={{ uri: item.imageUrl }}
+        // Parse the stored image reference
+        source={item.isLocal ? JSON.parse(item.imageUrl) : { uri: item.imageUrl }}
         style={styles.thumbnailImage}
       />
       <View style={styles.songInfo}>
@@ -98,7 +150,14 @@ const PlayerScreen = ({ route }) => {
   const [songs, setSongs] = useState([]);
 
   useEffect(() => {
-    loadSongs();
+    const setupDatabase = async () => {
+      const database = await initDatabase();
+      setDb(database);
+      loadSongs(database);
+    };
+
+    setupDatabase();
+
     return sound
       ? () => {
           sound.unloadAsync();
@@ -106,18 +165,15 @@ const PlayerScreen = ({ route }) => {
       : undefined;
   }, []);
 
-  const loadSongs = () => {
-    db.transaction(tx => {
-      tx.executeSql(
-        'SELECT * FROM songs',
-        [],
-        (_, { rows: { _array } }) => {
-          setSongs(_array);
-          const index = _array.findIndex(s => s.id === song.id);
-          setCurrentSongIndex(index);
-        }
-      );
-    });
+  const loadSongs = async (database) => {
+    try {
+      const allSongs = await database.getAllAsync('SELECT * FROM songs');
+      setSongs(allSongs);
+      const index = allSongs.findIndex(s => s.id === song.id);
+      setCurrentSongIndex(index);
+    } catch (error) {
+      console.error('Error loading songs:', error);
+    }
   };
 
   async function playSound() {
@@ -159,7 +215,11 @@ const PlayerScreen = ({ route }) => {
   return (
     <View style={styles.playerContainer}>
       <Image
-        source={{ uri: songs[currentSongIndex]?.imageUrl }}
+        source={
+          songs[currentSongIndex]?.isLocal 
+            ? JSON.parse(songs[currentSongIndex].imageUrl)
+            : { uri: songs[currentSongIndex]?.imageUrl }
+        }
         style={styles.albumArt}
       />
       <Text style={styles.songTitle}>{songs[currentSongIndex]?.title}</Text>
