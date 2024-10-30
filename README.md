@@ -68,4 +68,9 @@ After launching the app, you’ll see a list of songs stored in the database. Ta
 
 ---
 
+![image](https://github.com/user-attachments/assets/9db9a9be-1539-4d52-9275-bcfba56ef50b)
+
+
+
+
 Feel free to reach out if you encounter any issues or have questions regarding the app setup!
